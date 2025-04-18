@@ -169,6 +169,7 @@
         <input type="text" id="deleteNick" placeholder="Ник аккаунта"><br>
         <button type="button" onclick="deleteAccount()">Удалить</button>
         <h3>База аккаунтов</h3>
+        <p id="account-count"></p>
         <div id="account-list"></div>
       </div>
     </div>
@@ -195,16 +196,16 @@
 
   <script>
     let currentUser = null;
-    const ADMIN_CODE = 'Kotofey912312FGDSG8j425879032#&$(&#QHcew75)';
+    const ADMIN_CODE = 'admin123';
 
     window.onload = function() {
       const savedNick = localStorage.getItem('lastNick');
       const accounts = JSON.parse(localStorage.getItem('skufBankAccounts') || '{}');
       if (savedNick && accounts[savedNick]) {
         document.getElementById('loginName').value = savedNick;
-        document.getElementById('creditName').value = savedNick;
         document.getElementById('register-section').style.display = 'none';
         currentUser = savedNick;
+        document.getElementById('creditName').value = savedNick;
         document.getElementById('balanceAmount').innerText = accounts[savedNick].balance;
         updateTabs();
       } else {
@@ -216,7 +217,8 @@
       const tabs = document.getElementById('tabs');
       const accounts = JSON.parse(localStorage.getItem('skufBankAccounts') || '{}');
       const isManager = currentUser && accounts[currentUser]?.role === 'manager';
-      if (isManager) {
+      const existingManagerTab = document.querySelector('.tab[onclick="showTab(\'manager\')"]');
+      if (isManager && !existingManagerTab) {
         const managerTab = document.createElement('div');
         managerTab.className = 'tab';
         managerTab.onclick = () => showTab('manager');
@@ -482,9 +484,11 @@
 
     function payCredit(index) {
       let accounts = JSON.parse(localStorage.getItem('skufBankAccounts') || '{}');
-      accounts[currentUser].credits[index].paid = true;
-      localStorage.setItem('skufBankAccounts', JSON.stringify(accounts));
-      updateCreditList();
+      if (!accounts[currentUser].credits[index].paid && accounts[currentUser].credits[index].status === 'approved') {
+        accounts[currentUser].credits[index].paid = true;
+        localStorage.setItem('skufBankAccounts', JSON.stringify(accounts));
+        updateCreditList();
+      }
     }
 
     function assignManager() {
@@ -538,8 +542,7 @@
       managerControls.style.display = 'block';
       document.getElementById('managerLoginName').value = '';
       document.getElementById('managerPassword').value = '';
-
-      document.getElementById('creditUserNick').addEventListener('input', updateCreditOptions);
+      updateCreditOptions();
     }
 
     function updateCreditOptions() {
@@ -547,19 +550,31 @@
       const creditIndexSelect = document.getElementById('creditIndex');
       creditIndexSelect.innerHTML = '<option value="">Выберите кредит</option>';
 
-      if (!nick) return;
+      if (!nick) {
+        document.getElementById('managerMessage').innerText = 'Введите ник пользователя!';
+        return;
+      }
 
       let accounts = JSON.parse(localStorage.getItem('skufBankAccounts') || '{}');
-      if (!accounts[nick]) return;
+      if (!accounts[nick]) {
+        document.getElementById('managerMessage').innerText = `Аккаунт ${nick} не найден!`;
+        return;
+      }
 
       accounts[nick].credits.forEach((credit, index) => {
         if (!credit.paid) {
           const option = document.createElement('option');
           option.value = index;
-          option.innerText = `${credit.amount} аров, ${credit.days} дней`;
+          option.innerText = `${credit.amount} аров, ${credit.days} дней, статус: ${credit.status === 'approved' ? 'Получен' : 'Ожидает'}`;
           creditIndexSelect.appendChild(option);
         }
       });
+
+      if (accounts[nick].credits.filter(c => !c.paid).length === 0) {
+        document.getElementById('managerMessage').innerText = `У ${nick} нет активных кредитов!`;
+      } else {
+        document.getElementById('managerMessage').innerText = '';
+      }
     }
 
     function updateCreditStatus() {
@@ -579,10 +594,18 @@
         return;
       }
 
+      if (!accounts[nick].credits[creditIndex]) {
+        message.innerText = 'Кредит не найден!';
+        return;
+      }
+
       accounts[nick].credits[creditIndex].status = status;
       localStorage.setItem('skufBankAccounts', JSON.stringify(accounts));
       message.innerText = `Статус кредита для ${nick} обновлён!`;
       updateCreditOptions();
+      if (nick === currentUser) {
+        updateCreditList();
+      }
     }
 
     function activateAdmin() {
@@ -632,15 +655,19 @@
 
     function updateAccountList() {
       const accountList = document.getElementById('account-list');
+      const accountCount = document.getElementById('account-count');
       accountList.innerHTML = '';
       let accounts = JSON.parse(localStorage.getItem('skufBankAccounts') || '{}');
 
-      if (Object.keys(accounts).length === 0) {
+      const accountKeys = Object.keys(accounts);
+      accountCount.innerText = `Всего аккаунтов: ${accountKeys.length}`;
+
+      if (accountKeys.length === 0) {
         accountList.innerHTML = '<p>Нет аккаунтов.</p>';
         return;
       }
 
-      for (let nick in accounts) {
+      accountKeys.forEach(nick => {
         const account = accounts[nick];
         const accountItem = document.createElement('div');
         accountItem.innerHTML = `
@@ -661,7 +688,7 @@
         }
         accountItem.style.marginBottom = '20px';
         accountList.appendChild(accountItem);
-      }
+      });
     }
 
     document.getElementById('creditAmount').addEventListener('input', function() {
@@ -699,6 +726,8 @@
         daysSelect.options[6].disabled = true;
       }
     });
+
+    document.getElementById('creditUserNick').addEventListener('input', updateCreditOptions);
   </script>
 </body>
 </html>
