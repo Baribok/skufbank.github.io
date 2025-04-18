@@ -168,6 +168,10 @@
         <h3>Удалить аккаунт</h3>
         <input type="text" id="deleteNick" placeholder="Ник аккаунта"><br>
         <button type="button" onclick="deleteAccount()">Удалить</button>
+        <h3>Управление данными</h3>
+        <button type="button" onclick="downloadAccounts()">Скачать accounts.json</button>
+        <input type="file" id="uploadAccounts" accept=".json"><br>
+        <button type="button" onclick="uploadAccounts()">Загрузить accounts.json</button>
         <h3>База аккаунтов</h3>
         <p id="account-count"></p>
         <div id="account-list"></div>
@@ -642,6 +646,8 @@
       localStorage.setItem('skufBankAccounts', JSON.stringify(accounts));
       if (deleteNick === currentUser) {
         currentUser = null;
+        localStorage.removeItem('lastNick');
+        document.getElementById('loginName').value = '';
         document.getElementById('creditName').value = '';
         document.getElementById('balanceAmount').innerText = '0';
         document.getElementById('register-section').style.display = 'block';
@@ -651,6 +657,42 @@
       updateAccountList();
       message.innerText = `Аккаунт ${deleteNick} удалён!`;
       document.getElementById('deleteNick').value = '';
+    }
+
+    function downloadAccounts() {
+      const accounts = JSON.parse(localStorage.getItem('skufBankAccounts') || '{}');
+      const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(accounts, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute('href', dataStr);
+      downloadAnchor.setAttribute('download', 'accounts.json');
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      document.body.removeChild(downloadAnchor);
+      document.getElementById('message').innerText = 'Файл accounts.json скачан!';
+    }
+
+    function uploadAccounts() {
+      const fileInput = document.getElementById('uploadAccounts');
+      const message = document.getElementById('message');
+      if (!fileInput.files.length) {
+        message.innerText = 'Выберите JSON-файл!';
+        return;
+      }
+
+      const file = fileInput.files[0];
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const newAccounts = JSON.parse(e.target.result);
+          localStorage.setItem('skufBankAccounts', JSON.stringify(newAccounts));
+          updateAccountList();
+          message.innerText = 'Аккаунты успешно загружены!';
+          fileInput.value = '';
+        } catch (error) {
+          message.innerText = 'Ошибка: неверный формат JSON-файла!';
+        }
+      };
+      reader.readAsText(file);
     }
 
     function updateAccountList() {
