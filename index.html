@@ -172,6 +172,12 @@
         <button type="button" onclick="downloadAccounts()">Скачать accounts.json</button>
         <input type="file" id="uploadAccounts" accept=".json"><br>
         <button type="button" onclick="uploadAccounts()">Загрузить accounts.json</button>
+        <h3>Подтвердить оплату кредита (временное решение)</h3>
+        <input type="text" id="payCreditNick" placeholder="Ник пользователя"><br>
+        <select id="payCreditIndex">
+          <option value="">Выберите кредит</option>
+        </select><br>
+        <button type="button" onclick="confirmCreditPayment()">Подтвердить оплату</button>
         <h3>База аккаунтов</h3>
         <p id="account-count"></p>
         <div id="account-list"></div>
@@ -194,6 +200,7 @@
           <option value="pending">Не получил деньги</option>
         </select><br>
         <button type="button" onclick="updateCreditStatus()">Обновить статус</button>
+        <p>Для оплаты кредита отправьте запрос в Discord и дождитесь подтверждения реакции ✅.</p>
       </div>
     </div>
   </div>
@@ -201,6 +208,7 @@
   <script>
     let currentUser = null;
     const ADMIN_CODE = 'admin123';
+    const WEBHOOK_URL = 'https://discord.com/api/webhooks/1362797347133849600/UlvhA-F_twhidpFTSzXKFOaqWsPWmcw_zQTw41TA8jvU8ObO7DnxdtJE1leoo0NhjqzR';
 
     window.onload = function() {
       const savedNick = localStorage.getItem('lastNick');
@@ -215,6 +223,7 @@
       } else {
         document.getElementById('register-section').style.display = 'block';
       }
+      document.getElementById('payCreditNick').addEventListener('input', updatePayCreditOptions);
     };
 
     function updateTabs() {
@@ -438,12 +447,11 @@
       });
       localStorage.setItem('skufBankAccounts', JSON.stringify(accounts));
 
-      const webhookUrl = 'https://discord.com/api/webhooks/1362797347133849600/UlvhA-F_twhidpFTSzXKFOaqWsPWmcw_zQTw41TA8jvU8ObO7DnxdtJE1leoo0NhjqzR';
       const data = {
         content: `Кредитный запрос от ${creditName}, Discord: ${discordName}, сумма: ${creditAmount} аров, срок: ${creditDays} дней`
       };
 
-      fetch(webhookUrl, {
+      fetch(WEBHOOK_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
@@ -461,6 +469,32 @@
       });
     }
 
+    function requestCreditPayment(index) {
+      let accounts = JSON.parse(localStorage.getItem('skufBankAccounts') || '{}');
+      const credit = accounts[currentUser].credits[index];
+      if (!credit || credit.paid || credit.status !== 'approved') return;
+
+      const data = {
+        content: `Запрос на оплату кредита от ${currentUser}: ${credit.amount} аров, срок: ${credit.days} дней. Подтвердите оплату реакцией ✅.`
+      };
+
+      fetch(WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      })
+      .then(response => {
+        if (response.ok) {
+          document.getElementById('creditMessage').innerText = 'Запрос на оплату отправлен в Discord. Дождитесь подтверждения реакции ✅.';
+        } else {
+          document.getElementById('creditMessage').innerText = 'Ошибка при отправке запроса на оплату!';
+        }
+      })
+      .catch(() => {
+        document.getElementById('creditMessage').innerText = 'Ошибка подключения к Discord!';
+      });
+    }
+
     function updateCreditList() {
       const creditList = document.getElementById('credit-list');
       creditList.innerHTML = '';
@@ -475,24 +509,15 @@
       }
 
       credits.forEach((credit, index) => {
-        const status = credit.paid ? 'Оплачен' : credit.status === 'approved' ? 'Получен' : 'Ожидает';
+        const status = credit.paid ? 'Оплачен' : credit.status === 'approved' ? 'Получен (ожидает оплаты в Discord)' : 'Ожидает';
         const creditItem = document.createElement('div');
         creditItem.className = 'credit-item';
         creditItem.innerHTML = `
           Кредит: ${credit.amount} аров, срок: ${credit.days} дней, Discord: ${credit.discord}, статус: ${status}
-          ${!credit.paid && credit.status === 'approved' ? `<button onclick="payCredit(${index})">Оплатить</button>` : ''}
+          ${!credit.paid && credit.status === 'approved' ? `<button onclick="requestCreditPayment(${index})">Запросить оплату</button>` : ''}
         `;
         creditList.appendChild(creditItem);
       });
-    }
-
-    function payCredit(index) {
-      let accounts = JSON.parse(localStorage.getItem('skufBankAccounts') || '{}');
-      if (!accounts[currentUser].credits[index].paid && accounts[currentUser].credits[index].status === 'approved') {
-        accounts[currentUser].credits[index].paid = true;
-        localStorage.setItem('skufBankAccounts', JSON.stringify(accounts));
-        updateCreditList();
-      }
     }
 
     function assignManager() {
@@ -693,6 +718,61 @@
         }
       };
       reader.readAsText(file);
+    }
+
+    function updatePayCreditOptions() {
+      const nick = document.getElementById('payCreditNick').value.trim();
+      const creditIndexSelect = document.getElementById('payCreditIndex');
+      creditIndexSelect.innerHTML = '<option value="">Выберите кредит</option>';
+
+      if (!nick) return;
+
+      let accounts = JSON.parse(localStorage.getItem('skufBankAccounts') || '{}');
+      if (!accounts[nick]) return;
+
+      accounts[nick].credits.forEach((credit, index) => {
+        if (!credit.paid && credit.status === 'approved') {
+          const option = document.createElement('option');
+          option.value = index;
+          option.innerText = `${credit.amount} аров, ${credit.days} дней`;
+          creditIndexSelect.appendChild(option);
+        }
+      });
+    }
+
+    function confirmCreditPayment() {
+      const nick = document.getElementById('payCreditNick').value.trim();
+      const creditIndex = document.getElementById('payCreditIndex').value;
+      const message = document.getElementById('message');
+
+      if (!nick || creditIndex === '') {
+        message.innerText = 'Выберите пользователя и кредит!';
+        return;
+      }
+
+      let accounts = JSON.parse(localStorage.getItem('skufBankAccounts') || '{}');
+      if (!accounts[nick]) {
+        message.innerText = `Аккаунт ${nick} не найден!`;
+        return;
+      }
+
+      if (!accounts[nick].credits[creditIndex]) {
+        message.innerText = 'Кредит не найден!';
+        return;
+      }
+
+      if (accounts[nick].credits[creditIndex].status !== 'approved') {
+        message.innerText = 'Кредит не готов к оплате!';
+        return;
+      }
+
+      accounts[nick].credits[creditIndex].paid = true;
+      localStorage.setItem('skufBankAccounts', JSON.stringify(accounts));
+      message.innerText = `Оплата кредита для ${nick} подтверждена!`;
+      updatePayCreditOptions();
+      if (nick === currentUser) {
+        updateCreditList();
+      }
     }
 
     function updateAccountList() {
