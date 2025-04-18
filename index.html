@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Скуф Банк</title>
+  <style>
+    body {
+      background-image: url('dirt.jpg');
+      background-repeat: repeat;
+      font-family: 'Arial', sans-serif;
+      color: #fff;
+      text-align: center;
+      margin: 0;
+      text-shadow: 2px 2px #000;
+    }
+    .container {
+      background-color: rgba(0, 0, 0, 0.7);
+      border: 4px solid #555;
+      padding: 20px;
+      max-width: 600px;
+      margin: 40px auto;
+      border-radius: 10px;
+    }
+    h1 {
+      font-size: 36px;
+      margin-bottom: 20px;
+    }
+    h2 {
+      font-size: 24px;
+      margin: 20px 0;
+    }
+    p {
+      font-size: 18px;
+      margin-bottom: 20px;
+    }
+    input, button, select {
+      padding: 10px;
+      font-size: 16px;
+      margin: 10px;
+      border: 2px solid #000;
+      background-color: #fff;
+      color: #000;
+    }
+    button {
+      background-color: #4CAF50;
+      color: #fff;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    button:disabled {
+      background-color: #555;
+      cursor: not-allowed;
+    }
+    .pixel-img {
+      image-rendering: pixelated;
+    }
+    .tabs {
+      display: flex;
+      justify-content: space-around;
+      margin-bottom: 20px;
+    }
+    .tab {
+      background-color: #333;
+      padding: 10px;
+      cursor: pointer;
+      border: 2px solid #000;
+      flex: 1;
+      text-align: center;
+    }
+    .tab:hover {
+      background-color: #555;
+    }
+    .tab.active {
+      background-color: #4CAF50;
+    }
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
+    .balance-controls {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .balance-controls button {
+      width: 40px;
+      margin: 0 10px;
+    }
+    .credit-list {
+      margin-top: 20px;
+      text-align: left;
+    }
+    .credit-item {
+      margin: 10px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Скуф Банк</h1>
+    <img src="https://minecraft.wiki/images/Slimeball_JE2_BE2.png?ebe30" alt="Slimeball Logo" class="pixel-img" style="width: 100px; height: 100px;">
+    <p>Добро пожаловать, игрок! Скуф Банк — лучший банк в Minecraft!<br>Храните свои ары в надёжности!</p>
+    <div class="tabs" id="tabs">
+      <div class="tab active" onclick="showTab('login')">Вход/Регистрация</div>
+      <div class="tab" onclick="showTab('credits')">Кредиты</div>
+      <div class="tab" onclick="showTab('balance')">Личный счёт</div>
+      <div class="tab" onclick="showTab('admin')">Админ-панель</div>
+    </div>
+    <div id="login" class="tab-content active">
+      <h2>Вход</h2>
+      <input type="text" id="loginName" placeholder="Ваш ник в Minecraft"><br>
+      <input type="password" id="loginPassword" placeholder="Пароль"><br>
+      <button type="button" onclick="login()">Войти</button>
+      <button type="button" onclick="showForgotPassword()">Забыл пароль</button>
+      <div id="forgot-password" style="display: none;">
+        <input type="text" id="email" placeholder="Ваша почта"><br>
+        <button type="button" onclick="recoverPassword()">Восстановить пароль</button>
+      </div>
+      <div id="register-section" style="display: none;">
+        <h2>Регистрация</h2>
+        <input type="text" id="createName" placeholder="Ваш ник в Minecraft"><br>
+        <input type="password" id="createPassword" placeholder="Пароль"><br>
+        <input type="text" id="createEmail" placeholder="Почта (для восстановления, опционально)"><br>
+        <button type="button" onclick="createAccount()">Создать счёт</button>
+      </div>
+      <p id="message"></p>
+    </div>
+    <div id="credits" class="tab-content">
+      <h2>Кредиты</h2>
+      <input type="text" id="creditName" placeholder="Ник игрока" readonly><br>
+      <input type="text" id="discordName" placeholder="Ник в Discord (например, @murzila1)"><br>
+      <input type="number" id="creditAmount" placeholder="Сумма аров"><br>
+      <select id="creditDays">
+        <option value="5">5 дней (до 20 аров)</option>
+        <option value="10">10 дней (до 100 аров)</option>
+        <option value="20">20 дней (до 200 аров)</option>
+        <option value="30">30 дней (до 300 аров)</option>
+        <option value="40">40 дней (до 400 аров)</option>
+        <option value="60">60 дней (500–1000 аров)</option>
+        <option value="120">120 дней (1000+ аров)</option>
+      </select><br>
+      <button type="button" onclick="requestCredit()">Оформить кредит</button>
+      <p id="creditMessage"></p>
+      <div id="credit-list" class="credit-list"></div>
+    </div>
+    <div id="balance" class="tab-content">
+      <h2>Личный счёт</h2>
+      <h3>Баланс: <span id="balanceAmount">0</span> аров</h3>
+      <div class="balance-controls">
+        <button onclick="changeBalance(-10)">−</button>
+        <input type="number" id="balanceInput" placeholder="Сумма" style="width: 100px;">
+        <button onclick="changeBalance(10)">+</button>
+      </div>
+    </div>
+    <div id="admin" class="tab-content">
+      <h2>Админ-панель</h2>
+      <input type="text" id="adminCode" placeholder="Код админа"><br>
+      <button type="button" onclick="activateAdmin()">Активировать</button>
+      <div id="admin-controls" style="display: none;">
+        <h3>Назначить менеджера банка</h3>
+        <input type="text" id="managerNick" placeholder="Ник менеджера"><br>
+        <button type="button" onclick="assignManager()">Назначить</button>
+        <h3>Удалить аккаунт</h3>
+        <input type="text" id="deleteNick" placeholder="Ник аккаунта"><br>
+        <button type="button" onclick="deleteAccount()">Удалить</button>
+        <h3>База аккаунтов</h3>
+        <div id="account-list"></div>
+      </div>
+    </div>
+    <div id="manager" class="tab-content">
+      <h2>Менеджер кредитов</h2>
+      <input type="text" id="managerLoginName" placeholder="Ваш ник"><br>
+      <input type="password" id="managerPassword" placeholder="Пароль"><br>
+      <button type="button" onclick="managerLogin()">Войти</button>
+      <p id="managerMessage"></p>
+      <div id="manager-controls" style="display: none;">
+        <h3>Управление кредитами</h3>
+        <input type="text" id="creditUserNick" placeholder="Ник пользователя"><br>
+        <select id="creditIndex">
+          <option value="">Выберите кредит</option>
+        </select><br>
+        <select id="creditStatus">
+          <option value="approved">Получил деньги</option>
+          <option value="pending">Не получил деньги</option>
+        </select><br>
+        <button type="button" onclick="updateCreditStatus()">Обновить статус</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentUser = null;
+    const ADMIN_CODE = 'Kotofey912312FGDSG8j425879032#&$(&#QHcew75)';
+
+    window.onload = function() {
+      const savedNick = localStorage.getItem('lastNick');
+      const accounts = JSON.parse(localStorage.getItem('skufBankAccounts') || '{}');
+      if (savedNick && accounts[savedNick]) {
+        document.getElementById('loginName').value = savedNick;
+        document.getElementById('creditName').value = savedNick;
+        document.getElementById('register-section').style.display = 'none';
+        currentUser = savedNick;
+        document.getElementById('balanceAmount').innerText = accounts[savedNick].balance;
+        updateTabs();
+      } else {
+        document.getElementById('register-section').style.display = 'block';
+      }
+    };
+
+    function updateTabs() {
+      const tabs = document.getElementById('tabs');
+      const accounts = JSON.parse(localStorage.getItem('skufBankAccounts') || '{}');
+      const isManager = currentUser && accounts[currentUser]?.role === 'manager';
+      if (isManager) {
+        const managerTab = document.createElement('div');
+        managerTab.className = 'tab';
+        managerTab.onclick = () => showTab('manager');
+        managerTab.innerText = 'Менеджер кредитов';
+        tabs.appendChild(managerTab);
+      }
+    }
+
+    function showTab(tabId) {
+      document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+      document.getElementById(tabId).classList.add('active');
+      document.querySelector(`.tab[onclick="showTab('${tabId}')"]`).classList.add('active');
+      if (tabId === 'credits' && currentUser) {
+        updateCreditList();
+      }
+      if (tabId === 'balance' && currentUser) {
+        const accounts = JSON.parse(localStorage.getItem('skufBankAccounts') || '{}');
+        document.getElementById('balanceAmount').innerText = accounts[currentUser].balance;
+      }
+    }
+
+    function createAccount() {
+      const playerName = document.getElementById('createName').value.trim();
+      const password = document.getElementById('createPassword').value;
+      const email = document.getElementById('createEmail').value.trim();
+      const message = document.getElementById('message');
+
+      if (!playerName || !password) {
+        message.innerText = 'Введите ник и пароль!';
+        return;
+      }
+
+      let accounts = JSON.parse(localStorage.getItem('skufBankAccounts') || '{}');
+
+      if (accounts[playerName]) {
+        message.innerText = `Счёт для ${playerName} уже существует!`;
+        return;
+      }
+
+      accounts[playerName] = {
+        created: true,
+        balance: 0,
+        password: password,
+        email: email || '',
+        credits: [],
+        role: 'user'
+      };
+      localStorage.setItem('skufBankAccounts', JSON.stringify(accounts));
+      localStorage.setItem('lastNick', playerName);
+      message.innerText = `Счёт для ${playerName} создан! Теперь войдите.`;
+      document.getElementById('register-section').style.display = 'none';
+    }
+
+    function login() {
+      const playerName = document.getElementById('loginName').value.trim();
+      const password = document.getElementById('loginPassword').value;
+      const message = document.getElementById('message');
+
+      if (!playerName || !password) {
+        message.innerText = 'Введите ник и пароль!';
+        return;
+      }
+
+      let accounts = JSON.parse(localStorage.getItem('skufBankAccounts') || '{}');
+
+      if (!accounts[playerName]) {
+        message.innerText = `Счёт для ${playerName} не найден! Создайте счёт.`;
+        return;
+      }
+
+      if (accounts[playerName].password !== password) {
+        message.innerText = 'Неверный пароль!';
+        return;
+      }
+
+      currentUser = playerName;
+      localStorage.setItem('lastNick', playerName);
+      message.innerText = `Добро пожаловать обратно, ${playerName}!`;
+      document.getElementById('creditName').value = playerName;
+      document.getElementById('balanceAmount').innerText = accounts[playerName].balance;
+      document.getElementById('register-section').style.display = 'none';
+      updateCreditList();
+      updateTabs();
+    }
+
+    function showForgotPassword() {
+      document.getElementById('forgot-password').style.display = 'block';
+    }
+
+    function recoverPassword() {
+      const email = document.getElementById('email').value.trim();
+      const message = document.getElementById('message');
+
+      if (!email) {
+        message.innerText = 'Введите почту!';
+        return;
+      }
+
+      let accounts = JSON.parse(localStorage.getItem('skufBankAccounts') || '{}');
+      let found = false;
+
+      for (let nick in accounts) {
+        if (accounts[nick].email === email) {
+          message.innerText = `Пароль для ${nick}: ${accounts[nick].password} (Проверьте почту, это имитация!)`;
+          found = true;
+          break;
+        }
+      }
+
+      if (!found) {
+        message.innerText = 'Аккаунт с такой почтой не найден!';
+      }
+
+      document.getElementById('forgot-password').style.display = 'none';
+      document.getElementById('email').value = '';
+    }
+
+    function changeBalance(change) {
+      if (!currentUser) {
+        document.getElementById('message').innerText = 'Сначала войдите!';
+        return;
+      }
+
+      const balanceInput = document.getElementById('balanceInput').value;
+      const balanceDisplay = document.getElementById('balanceAmount');
+      let accounts = JSON.parse(localStorage.getItem('skufBankAccounts') || '{}');
+      let currentBalance = accounts[currentUser].balance;
+
+      if (balanceInput) {
+        change = parseInt(balanceInput) * (change > 0 ? 1 : -1);
+      }
+
+      if (currentBalance + change < 0) {
+        document.getElementById('message').innerText = 'Недостаточно аров!';
+        return;
+      }
+
+      accounts[currentUser].balance += change;
+      localStorage.setItem('skufBankAccounts', JSON.stringify(accounts));
+      balanceDisplay.innerText = accounts[currentUser].balance;
+      document.getElementById('balanceInput').value = '';
+    }
+
+    function requestCredit() {
+      const creditName = document.getElementById('creditName').value.trim();
+      const discordName = document.getElementById('discordName').value.trim();
+      const creditAmount = parseInt(document.getElementById('creditAmount').value);
+      const creditDays = parseInt(document.getElementById('creditDays').value);
+      const creditMessage = document.getElementById('creditMessage');
+
+      if (!creditName || !creditAmount || creditAmount <= 0) {
+        creditMessage.innerText = 'Заполните ник и сумму корректно!';
+        return;
+      }
+
+      if (!discordName) {
+        creditMessage.innerText = 'Ник в Discord обязателен!';
+        return;
+      }
+
+      let accounts = JSON.parse(localStorage.getItem('skufBankAccounts') || '{}');
+      if (!accounts[creditName]) {
+        creditMessage.innerText = `Счёт для ${creditName} не найден!`;
+        return;
+      }
+
+      const activeCredits = accounts[creditName].credits.filter(c => !c.paid).length;
+      if (activeCredits >= 2) {
+        creditMessage.innerText = 'У вас уже есть 2 активных кредита! Оплатите хотя бы один.';
+        return;
+      }
+
+      if (creditAmount > 20 && creditDays < 10) {
+        creditMessage.innerText = 'Для суммы больше 20 аров нужен срок от 10 дней!';
+        return;
+      }
+      if (creditAmount > 100 && creditDays < 20) {
+        creditMessage.innerText = 'Для суммы больше 100 аров нужен срок от 20 дней!';
+        return;
+      }
+      if (creditAmount > 200 && creditDays < 30) {
+        creditMessage.innerText = 'Для суммы больше 200 аров нужен срок от 30 дней!';
+        return;
+      }
+      if (creditAmount > 300 && creditDays < 40) {
+        creditMessage.innerText = 'Для суммы больше 300 аров нужен срок от 40 дней!';
+        return;
+      }
+      if (creditAmount > 400 && creditDays < 60) {
+        creditMessage.innerText = 'Для суммы больше 400 аров нужен срок от 60 дней!';
+        return;
+      }
+      if (creditAmount > 1000 && creditDays < 120) {
+        creditMessage.innerText = 'Для суммы больше 1000 аров нужен срок 120 дней!';
+        return;
+      }
+      if (creditAmount <= 1000 && creditDays > 60) {
+        creditMessage.innerText = 'Срок 120 дней доступен только для 1000+ аров!';
+        return;
+      }
+      if (creditAmount < 500 && creditDays > 40) {
+        creditMessage.innerText = 'Срок 60 дней доступен только для 500+ аров!';
+        return;
+      }
+
+      accounts[creditName].credits.push({
+        amount: creditAmount,
+        days: creditDays,
+        discord: discordName,
+        paid: false,
+        status: 'pending'
+      });
+      localStorage.setItem('skufBankAccounts', JSON.stringify(accounts));
+
+      const webhookUrl = 'https://discord.com/api/webhooks/1362797347133849600/UlvhA-F_twhidpFTSzXKFOaqWsPWmcw_zQTw41TA8jvU8ObO7DnxdtJE1leoo0NhjqzR';
+      const data = {
+        content: `Кредитный запрос от ${creditName}, Discord: ${discordName}, сумма: ${creditAmount} аров, срок: ${creditDays} дней`
+      };
+
+      fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      })
+      .then(response => {
+        if (response.ok) {
+          creditMessage.innerText = `Кредит на ${creditAmount} аров для ${creditName} отправлен на рассмотрение!`;
+          updateCreditList();
+        } else {
+          creditMessage.innerText = 'Ошибка при отправке кредита!';
+        }
+      })
+      .catch(() => {
+        creditMessage.innerText = 'Ошибка подключения к Discord!';
+      });
+    }
+
+    function updateCreditList() {
+      const creditList = document.getElementById('credit-list');
+      creditList.innerHTML = '';
+      if (!currentUser) return;
+
+      let accounts = JSON.parse(localStorage.getItem('skufBankAccounts') || '{}');
+      const credits = accounts[currentUser].credits || [];
+
+      if (credits.length === 0) {
+        creditList.innerHTML = '<p>У вас нет кредитов.</p>';
+        return;
+      }
+
+      credits.forEach((credit, index) => {
+        const status = credit.paid ? 'Оплачен' : credit.status === 'approved' ? 'Получен' : 'Ожидает';
+        const creditItem = document.createElement('div');
+        creditItem.className = 'credit-item';
+        creditItem.innerHTML = `
+          Кредит: ${credit.amount} аров, срок: ${credit.days} дней, Discord: ${credit.discord}, статус: ${status}
+          ${!credit.paid && credit.status === 'approved' ? `<button onclick="payCredit(${index})">Оплатить</button>` : ''}
+        `;
+        creditList.appendChild(creditItem);
+      });
+    }
+
+    function payCredit(index) {
+      let accounts = JSON.parse(localStorage.getItem('skufBankAccounts') || '{}');
+      accounts[currentUser].credits[index].paid = true;
+      localStorage.setItem('skufBankAccounts', JSON.stringify(accounts));
+      updateCreditList();
+    }
+
+    function assignManager() {
+      const managerNick = document.getElementById('managerNick').value.trim();
+      const message = document.getElementById('message');
+      let accounts = JSON.parse(localStorage.getItem('skufBankAccounts') || '{}');
+
+      if (!managerNick) {
+        message.innerText = 'Введите ник менеджера!';
+        return;
+      }
+
+      if (!accounts[managerNick]) {
+        message.innerText = `Аккаунт ${managerNick} не найден!`;
+        return;
+      }
+
+      accounts[managerNick].role = 'manager';
+      localStorage.setItem('skufBankAccounts', JSON.stringify(accounts));
+      message.innerText = `${managerNick} назначен менеджером банка!`;
+      if (managerNick === currentUser) {
+        updateTabs();
+      }
+      document.getElementById('managerNick').value = '';
+    }
+
+    function managerLogin() {
+      const managerName = document.getElementById('managerLoginName').value.trim();
+      const password = document.getElementById('managerPassword').value;
+      const message = document.getElementById('managerMessage');
+      const managerControls = document.getElementById('manager-controls');
+
+      if (!managerName || !password) {
+        message.innerText = 'Введите ник и пароль!';
+        return;
+      }
+
+      let accounts = JSON.parse(localStorage.getItem('skufBankAccounts') || '{}');
+
+      if (!accounts[managerName] || accounts[managerName].role !== 'manager') {
+        message.innerText = `У ${managerName} нет прав менеджера!`;
+        return;
+      }
+
+      if (accounts[managerName].password !== password) {
+        message.innerText = 'Неверный пароль!';
+        return;
+      }
+
+      message.innerText = `Добро пожаловать, менеджер ${managerName}!`;
+      managerControls.style.display = 'block';
+      document.getElementById('managerLoginName').value = '';
+      document.getElementById('managerPassword').value = '';
+
+      document.getElementById('creditUserNick').addEventListener('input', updateCreditOptions);
+    }
+
+    function updateCreditOptions() {
+      const nick = document.getElementById('creditUserNick').value.trim();
+      const creditIndexSelect = document.getElementById('creditIndex');
+      creditIndexSelect.innerHTML = '<option value="">Выберите кредит</option>';
+
+      if (!nick) return;
+
+      let accounts = JSON.parse(localStorage.getItem('skufBankAccounts') || '{}');
+      if (!accounts[nick]) return;
+
+      accounts[nick].credits.forEach((credit, index) => {
+        if (!credit.paid) {
+          const option = document.createElement('option');
+          option.value = index;
+          option.innerText = `${credit.amount} аров, ${credit.days} дней`;
+          creditIndexSelect.appendChild(option);
+        }
+      });
+    }
+
+    function updateCreditStatus() {
+      const nick = document.getElementById('creditUserNick').value.trim();
+      const creditIndex = document.getElementById('creditIndex').value;
+      const status = document.getElementById('creditStatus').value;
+      const message = document.getElementById('managerMessage');
+
+      if (!nick || creditIndex === '') {
+        message.innerText = 'Выберите пользователя и кредит!';
+        return;
+      }
+
+      let accounts = JSON.parse(localStorage.getItem('skufBankAccounts') || '{}');
+      if (!accounts[nick]) {
+        message.innerText = `Аккаунт ${nick} не найден!`;
+        return;
+      }
+
+      accounts[nick].credits[creditIndex].status = status;
+      localStorage.setItem('skufBankAccounts', JSON.stringify(accounts));
+      message.innerText = `Статус кредита для ${nick} обновлён!`;
+      updateCreditOptions();
+    }
+
+    function activateAdmin() {
+      const adminCode = document.getElementById('adminCode').value;
+      const adminControls = document.getElementById('admin-controls');
+      const message = document.getElementById('message');
+
+      if (adminCode === ADMIN_CODE) {
+        adminControls.style.display = 'block';
+        updateAccountList();
+        message.innerText = 'Админ-панель активирована!';
+      } else {
+        adminControls.style.display = 'none';
+        message.innerText = 'Неверный код админа!';
+      }
+    }
+
+    function deleteAccount() {
+      const deleteNick = document.getElementById('deleteNick').value.trim();
+      const message = document.getElementById('message');
+      let accounts = JSON.parse(localStorage.getItem('skufBankAccounts') || '{}');
+
+      if (!deleteNick) {
+        message.innerText = 'Введите ник аккаунта!';
+        return;
+      }
+
+      if (!accounts[deleteNick]) {
+        message.innerText = `Аккаунт ${deleteNick} не найден!`;
+        return;
+      }
+
+      delete accounts[deleteNick];
+      localStorage.setItem('skufBankAccounts', JSON.stringify(accounts));
+      if (deleteNick === currentUser) {
+        currentUser = null;
+        document.getElementById('creditName').value = '';
+        document.getElementById('balanceAmount').innerText = '0';
+        document.getElementById('register-section').style.display = 'block';
+        const managerTab = document.querySelector('.tab[onclick="showTab(\'manager\')"]');
+        if (managerTab) managerTab.remove();
+      }
+      updateAccountList();
+      message.innerText = `Аккаунт ${deleteNick} удалён!`;
+      document.getElementById('deleteNick').value = '';
+    }
+
+    function updateAccountList() {
+      const accountList = document.getElementById('account-list');
+      accountList.innerHTML = '';
+      let accounts = JSON.parse(localStorage.getItem('skufBankAccounts') || '{}');
+
+      if (Object.keys(accounts).length === 0) {
+        accountList.innerHTML = '<p>Нет аккаунтов.</p>';
+        return;
+      }
+
+      for (let nick in accounts) {
+        const account = accounts[nick];
+        const accountItem = document.createElement('div');
+        accountItem.innerHTML = `
+          <strong>Ник:</strong> ${nick}<br>
+          <strong>Баланс:</strong> ${account.balance} аров<br>
+          <strong>Роль:</strong> ${account.role}<br>
+          <strong>Кредиты:</strong> ${account.credits.length === 0 ? 'Нет' : ''}<br>
+        `;
+        if (account.credits.length > 0) {
+          const creditList = document.createElement('ul');
+          account.credits.forEach(credit => {
+            const status = credit.paid ? 'Оплачен' : credit.status === 'approved' ? 'Получен' : 'Ожидает';
+            const li = document.createElement('li');
+            li.innerText = `${credit.amount} аров, ${credit.days} дней, Discord: ${credit.discord}, ${status}`;
+            creditList.appendChild(li);
+          });
+          accountItem.appendChild(creditList);
+        }
+        accountItem.style.marginBottom = '20px';
+        accountList.appendChild(accountItem);
+      }
+    }
+
+    document.getElementById('creditAmount').addEventListener('input', function() {
+      const amount = parseInt(this.value) || 0;
+      const daysSelect = document.getElementById('creditDays');
+      for (let option of daysSelect.options) {
+        option.disabled = false;
+      }
+      if (amount <= 20) {
+        daysSelect.options[1].disabled = true;
+        daysSelect.options[2].disabled = true;
+        daysSelect.options[3].disabled = true;
+        daysSelect.options[4].disabled = true;
+        daysSelect.options[5].disabled = true;
+        daysSelect.options[6].disabled = true;
+      } else if (amount <= 100) {
+        daysSelect.options[2].disabled = true;
+        daysSelect.options[3].disabled = true;
+        daysSelect.options[4].disabled = true;
+        daysSelect.options[5].disabled = true;
+        daysSelect.options[6].disabled = true;
+      } else if (amount <= 200) {
+        daysSelect.options[3].disabled = true;
+        daysSelect.options[4].disabled = true;
+        daysSelect.options[5].disabled = true;
+        daysSelect.options[6].disabled = true;
+      } else if (amount <= 300) {
+        daysSelect.options[4].disabled = true;
+        daysSelect.options[5].disabled = true;
+        daysSelect.options[6].disabled = true;
+      } else if (amount <= 400) {
+        daysSelect.options[5].disabled = true;
+        daysSelect.options[6].disabled = true;
+      } else if (amount <= 1000) {
+        daysSelect.options[6].disabled = true;
+      }
+    });
+  </script>
+</body>
+</html>
